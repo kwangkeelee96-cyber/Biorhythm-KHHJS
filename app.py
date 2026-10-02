@@ -14,9 +14,9 @@ st.info("💡 **스마트폰 이용 팁**: 그래프 안에서 두 손가락으�
 # 날짜 선택 달력 UI
 col1, col2 = st.columns(2)
 with col1:
-    start_date = st.date_input("🗓️ 조회 시작일", datetime.date(2026, 10, 01))
+    start_date = st.date_input("🗓️ 조회 시작일", datetime.date(2026, 09, 29))
 with col2:
-    end_date = st.date_input("🗓️ 조회 종료일", datetime.date(2026, 11, 30))
+    end_date = st.date_input("🗓️ 조회 종료일", datetime.date(2026, 11, 29))
 
 st.markdown("---")
 
