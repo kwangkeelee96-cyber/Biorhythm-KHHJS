@@ -29,7 +29,7 @@ else:
         '부인 (어머님)': datetime.date(1973, 12, 17),
         '자녀H': datetime.date(2001, 6, 5),
         '자녀J': datetime.date(2003, 9, 4),
-        '자녀S (수험생)': datetime.date(2006, 8, 22)
+        '자녀S': datetime.date(2006, 8, 22)
     }
 
     days_diff = (end_date - start_date).days + 1
