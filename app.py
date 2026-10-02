@@ -1,33 +1,15 @@
 import streamlit as st
 import datetime
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import os
-import urllib.request
-import matplotlib.font_manager as fm
-
-# --- 💡 한글 폰트 깨짐 방지 ---
-@st.cache_resource
-def set_korean_font():
-    font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
-    font_path = "NanumGothic.ttf"
-    
-    if not os.path.exists(font_path):
-        urllib.request.urlretrieve(font_url, font_path)
-        
-    fm.fontManager.addfont(font_path)
-    plt.rcParams['font.family'] = 'NanumGothic'
-    plt.rcParams['axes.unicode_minus'] = False
-
-set_korean_font()
-# --------------------------------
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # 앱 전체 화면 넓게 쓰기
 st.set_page_config(page_title="가족 바이오리듬 앱", layout="wide")
 
 st.title("👨‍👩‍👧‍👦 우리 가족 바이오리듬 앱")
-st.write("원하시는 조회 기간을 아래 달력에서 직접 선택해 보세요. (그래프가 자동으로 업데이트됩니다)")
+st.write("원하시는 조회 기간을 아래 달력에서 직접 선택해 보세요.")
+st.info("💡 **스마트폰 이용 팁**: 그래프 안에서 두 손가락으로 확대/축소(핀치줌) 하거나, 옆으로 밀어서 이동해 보세요! 특정 날짜를 터치하면 정확한 수치도 볼 수 있습니다.")
 
 # 날짜 선택 달력 UI
 col1, col2 = st.columns(2)
@@ -47,7 +29,7 @@ else:
         '부인 (어머님)': datetime.date(1973, 12, 17),
         '자녀H': datetime.date(2001, 6, 5),
         '자녀J': datetime.date(2003, 9, 4),
-        '자녀S': datetime.date(2006, 8, 22)
+        '자녀S (수험생)': datetime.date(2006, 8, 22)
     }
 
     days_diff = (end_date - start_date).days + 1
@@ -56,45 +38,42 @@ else:
     cycles = {'신체': 23, '감성': 28, '지성': 33}
     colors = {'신체': '#d62728', '감성': '#2ca02c', '지성': '#1f77b4'}
 
-    # 그래프 5개 세팅, sharex=False로 두어 모든 그래프에 날짜 축을 표시
-    fig, axes = plt.subplots(len(birthdays), 1, figsize=(12, 22), sharex=False)
-    fig.suptitle(f'가족 바이오리듬 그래프\n({start_date} ~ {end_date})', fontsize=20, fontweight='bold', color='#2b4f81')
+    # 2. 프리미엄 반응형 차트(Plotly) 서브플롯 생성
+    titles = [f"[{person}] ({bday.year}년 {bday.month}월 {bday.day}일생)" for person, bday in birthdays.items()]
+    fig = make_subplots(rows=len(birthdays), cols=1, subplot_titles=titles, vertical_spacing=0.04)
 
-    # 간격 계산
-    interval = max(1, days_diff // 15)
-
-    for ax, (person, bday) in zip(axes, birthdays.items()):
+    for i, (person, bday) in enumerate(birthdays.items(), start=1):
         t = np.array([(d - bday).days for d in dates])
         
         physical = np.sin(2 * np.pi * t / cycles['신체']) * 100
         emotional = np.sin(2 * np.pi * t / cycles['감성']) * 100
         intellectual = np.sin(2 * np.pi * t / cycles['지성']) * 100
         
-        ax.plot(dates, physical, color=colors['신체'], linewidth=2.5, label='신체 (23일 주기)')
-        ax.plot(dates, emotional, color=colors['감성'], linewidth=2.5, label='감성 (28일 주기)')
-        ax.plot(dates, intellectual, color=colors['지성'], linewidth=2.5, label='지성 (33일 주기)')
-        
-        ax.axhline(0, color='black', linewidth=1)
-        ax.grid(axis='x', linestyle='--', alpha=0.7)
-        ax.set_ylim(-110, 110)
-        ax.set_title(f'[{person}] ({bday.year}년 {bday.month}월 {bday.day}일생)', loc='left', pad=15, fontsize=14, fontweight='bold')
-        
-        # 2. 모든 개별 그래프 하단에 날짜 형식 적용
-        ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
-        ax.set_xlabel('날짜', fontsize=11)
+        # 선 그리기 및 터치 시 점수(%) 팝업 설정
+        fig.add_trace(go.Scatter(x=dates, y=physical, mode='lines', name='신체(23일)', line=dict(color=colors['신체'], width=2.5), hovertemplate="%{y:.0f}점", showlegend=(i==1)), row=i, col=1)
+        fig.add_trace(go.Scatter(x=dates, y=emotional, mode='lines', name='감성(28일)', line=dict(color=colors['감성'], width=2.5), hovertemplate="%{y:.0f}점", showlegend=(i==1)), row=i, col=1)
+        fig.add_trace(go.Scatter(x=dates, y=intellectual, mode='lines', name='지성(33일)', line=dict(color=colors['지성'], width=2.5), hovertemplate="%{y:.0f}점", showlegend=(i==1)), row=i, col=1)
 
-        # 수능일(11.19) 강조 수직선
+        # 기준선 (0)
+        fig.add_hline(y=0, line_color='black', line_width=1, row=i, col=1)
+
+        # 수능일(11.19) 수직선
         csat_date = datetime.date(2026, 11, 19)
         if start_date <= csat_date <= end_date:
-            ax.axvline(csat_date, color='orange', linestyle=':', linewidth=2)
-            ax.text(csat_date, 105, '수능일', color='orange', fontweight='bold', ha='center', va='bottom', bbox=dict(facecolor='white', edgecolor='none', alpha=0.8))
+            fig.add_vline(x=csat_date, line_width=2, line_dash='dot', line_color='orange', row=i, col=1)
+            fig.add_annotation(x=csat_date, y=100, text="수능일", showarrow=False, font=dict(color="orange", size=13), bgcolor="rgba(255,255,255,0.8)", row=i, col=1)
 
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='lower center', ncol=3, bbox_to_anchor=(0.5, 0.01), fontsize=12)
-    plt.tight_layout()
-    # 상하 간격(hspace)을 벌려 위 그래프의 날짜와 아래 그래프의 제목이 겹치지 않게 조절
-    plt.subplots_adjust(top=0.92, bottom=0.07, hspace=0.45) 
+        # Y축 범위 및 모든 차트 하단에 날짜 형식 표시
+        fig.update_yaxes(range=[-110, 110], row=i, col=1)
+        fig.update_xaxes(tickformat="%m/%d", row=i, col=1)
 
-    # 3. use_container_width=True 옵션을 넣어 브라우저 배율에 맞춰 그래프 크기 자동 조절
-    st.pyplot(fig, use_container_width=True)
+    # 3. 전체 레이아웃 설정
+    fig.update_layout(
+        height=1600, # 5명 가족이 넉넉하게 보이도록 전체 높이 조정
+        hovermode="x unified", # 날짜 터치 시 3가지 바이오리듬 점수 한 번에 표시
+        legend=dict(orientation="h", yanchor="bottom", y=-0.04, xanchor="center", x=0.5),
+        margin=dict(t=50, b=50, l=30, r=30)
+    )
+
+    # 완성된 반응형 차트를 웹 화면에 출력 (가로 크기 자동 맞춤)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
