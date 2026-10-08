@@ -11,25 +11,30 @@ st.title("👨‍👩‍👧‍👦 우리 가족 바이오리듬 앱")
 st.write("원하시는 조회 기간을 아래 달력에서 직접 선택해 보세요.")
 st.info("💡 **스마트폰 이용 팁**: 그래프 안에서 두 손가락으로 확대/축소(핀치줌) 하거나, 옆으로 밀어서 이동해 보세요! 특정 날짜를 터치하면 정확한 수치도 볼 수 있습니다.")
 
-# 날짜 선택 달력 UI
+# --- 💡 핵심 변경: 접속한 '오늘' 날짜를 기준으로 앞뒤 한 달(30일) 자동 세팅 ---
+today = datetime.date.today()
+default_start = today - datetime.timedelta(days=30)
+default_end = today + datetime.timedelta(days=30)
+
+# 날짜 선택 달력 UI (기본값이 오늘 기준으로 설정됨)
 col1, col2 = st.columns(2)
 with col1:
-    start_date = st.date_input("🗓️ 조회 시작일", datetime.date(2026, 10, 1))
+    start_date = st.date_input("🗓️ 조회 시작일", default_start)
 with col2:
-    end_date = st.date_input("🗓️ 조회 종료일", datetime.date(2026, 11, 30))
+    end_date = st.date_input("🗓️ 조회 종료일", default_end)
 
 st.markdown("---")
 
 if start_date >= end_date:
     st.error("종료일이 시작일보다 빠르거나 같습니다. 날짜를 다시 설정해 주세요.")
 else:
-    # 1. 가족 5명 생년월일 순서대로 설정
+    # 가족 5명 생년월일 순서대로 설정
     birthdays = {
         '본인 (아버님)': datetime.date(1971, 2, 21),
         '부인 (어머님)': datetime.date(1973, 12, 17),
         '자녀H': datetime.date(2001, 6, 5),
         '자녀J': datetime.date(2003, 9, 4),
-        '자녀S': datetime.date(2006, 8, 22)
+        '자녀S (수험생)': datetime.date(2006, 8, 22)
     }
 
     days_diff = (end_date - start_date).days + 1
@@ -38,7 +43,7 @@ else:
     cycles = {'신체': 23, '감성': 28, '지성': 33}
     colors = {'신체': '#d62728', '감성': '#2ca02c', '지성': '#1f77b4'}
 
-    # 2. 프리미엄 반응형 차트(Plotly) 서브플롯 생성
+    # 프리미엄 반응형 차트(Plotly) 서브플롯 생성
     titles = [f"[{person}] ({bday.year}년 {bday.month}월 {bday.day}일생)" for person, bday in birthdays.items()]
     fig = make_subplots(rows=len(birthdays), cols=1, subplot_titles=titles, vertical_spacing=0.04)
 
@@ -57,6 +62,11 @@ else:
         # 기준선 (0)
         fig.add_hline(y=0, line_color='black', line_width=1, row=i, col=1)
 
+        # 💡 모든 가족 그래프 중앙에 '오늘' 기준선 추가 (참고하신 어플처럼)
+        if start_date <= today <= end_date:
+            fig.add_vline(x=today, line_width=1.5, line_dash='dash', line_color='gray', row=i, col=1)
+            fig.add_annotation(x=today, y=-95, text="오늘", showarrow=False, font=dict(color="gray", size=12), bgcolor="rgba(255,255,255,0.8)", row=i, col=1)
+
         # 수능일(11.19) 수직선
         csat_date = datetime.date(2026, 11, 19)
         if start_date <= csat_date <= end_date:
@@ -67,10 +77,10 @@ else:
         fig.update_yaxes(range=[-110, 110], row=i, col=1)
         fig.update_xaxes(tickformat="%m/%d", row=i, col=1)
 
-    # 3. 전체 레이아웃 설정
+    # 전체 레이아웃 설정
     fig.update_layout(
-        height=1600, # 5명 가족이 넉넉하게 보이도록 전체 높이 조정
-        hovermode="x unified", # 날짜 터치 시 3가지 바이오리듬 점수 한 번에 표시
+        height=1600,
+        hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=-0.04, xanchor="center", x=0.5),
         margin=dict(t=50, b=50, l=30, r=30)
     )
